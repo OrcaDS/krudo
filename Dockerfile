@@ -11,6 +11,7 @@ RUN uv sync --locked --no-dev --no-install-project
 COPY config ./config
 COPY ingestion ./ingestion
 COPY pipeline ./pipeline
+COPY warehouse ./warehouse
 RUN uv sync --locked --no-dev --no-editable
 
 # --- runtime: slim image, non-root, only the virtualenv and code ---
@@ -19,6 +20,8 @@ RUN useradd --create-home --uid 10001 pipeline
 WORKDIR /app
 COPY --from=builder --chown=pipeline:pipeline /app/.venv /app/.venv
 COPY transform ./transform
+# publish-data attaches the data dictionary to the release
+COPY docs/data_dictionary.md ./docs/data_dictionary.md
 # dbt's own scratch dirs: keep them out of the (read-only) project dir
 ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 \
     DBT_TARGET_PATH=/tmp/dbt/target DBT_LOG_PATH=/tmp/dbt/logs

@@ -1,0 +1,39 @@
+name: Weekly pipeline
+
+# GitHub turns off schedules in public repos after 60 days without activity; re-enable
+# under Actions if that happens.
+on:
+  schedule:
+    - cron: "0 2 * * 3" # Wednesday 10:00 Philippine time; DOE's week starts on Tuesday
+  workflow_dispatch:
+
+permissions:
+  contents: write # lake and open-data releases
+  packages: read
+
+concurrency:
+  group: weekly-pipeline # two runs at once would race on the lake release
+  cancel-in-progress: false
+
+jobs:
+  run-all:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Prepare lake folder
+        run: mkdir "$RUNNER_TEMP/lake" && chmod 777 "$RUNNER_TEMP/lake" # the image runs as uid 10001
+      # The image has no gh, so lend it the runner's (a static binary); GH_REPO names the repo
+      - name: Run the pipeline in the container
+        run: |
+          docker run --rm \
+            -v "$RUNNER_TEMP/lake:/app/lake" \
+            -v "$(command -v gh):/usr/local/bin/gh:ro" \
+            -e GH_TOKEN -e GH_REPO="$GITHUB_REPOSITORY" \
+            "ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/krudo-pipeline:latest" run-all
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

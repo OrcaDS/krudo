@@ -1,8 +1,4 @@
-"""Single entry point for the pipeline: `krudo <subcommand>` (also the Docker entrypoint).
-
-Subcommands are wired up milestone by milestone; until then they exit with code 2 so a
-scheduled run can never silently pass while doing nothing.
-"""
+"""Single entry point for the pipeline: `krudo <subcommand>` (also the Docker entrypoint)."""
 
 from __future__ import annotations
 
@@ -11,25 +7,18 @@ import dataclasses
 import json
 import logging
 import sys
+import urllib.error
 from collections.abc import Sequence
 from datetime import UTC, datetime
 from pathlib import Path
 
 from config.settings import Settings, load_settings
-from ingestion.common import manifest
+from ingestion.common import lake_release, manifest
 from ingestion.common.storage import get_storage
 from ingestion.doe import classify, discover, download, extract
 
 logger = logging.getLogger("krudo")
 TRANSFORM_DIR = Path("transform")  # the dbt project; commands run from the repo root (or /app)
-
-# Stages not built yet, with the milestone that builds them (project.md §10)
-PLANNED = {
-    "lake-push": ("Upload changed lake files to the release", 7),
-    "lake-pull": ("Restore the lake from the release", 7),
-    "publish-data": ("Release gold as open data if it changed", 7),
-    "run-all": ("Run every stage in order (the weekly run)", 7),
-}
 
 
 def _show_config(args: argparse.Namespace, settings: Settings) -> int:
@@ -58,6 +47,16 @@ def _ingest(args: argparse.Namespace, settings: Settings) -> int:
     )
     classify.classify_pending(storage, entries)
     return 0
+
+
+def _ingest_unless_down(args: argparse.Namespace, settings: Settings) -> int:
+    try:
+        return _ingest(args, settings)
+    except urllib.error.HTTPError:
+        raise  # DOE answered with an error (e.g. 404: the page moved): needs a person
+    except OSError as exc:  # timeout or no connection: DOE is down; still publish gold
+        logger.warning("DOE site unreachable (%s); skipped download for this run", exc)
+        return 0
 
 
 def _extract(args: argparse.Namespace, settings: Settings) -> int:
@@ -89,9 +88,44 @@ def _transform(args: argparse.Namespace, settings: Settings) -> int:
     return 0 if result.success else 1
 
 
-def _not_built(args: argparse.Namespace, settings: Settings) -> int:
-    logger.error("'%s' is not built yet (milestone %d)", args.command, PLANNED[args.command][1])
-    return 2
+def _lake_push(args: argparse.Namespace, settings: Settings) -> int:
+    """Upload changed lake assets (bronze tables, manifest, PDFs) to the GitHub release."""
+    lake_release.push(settings.lake_root, lake_release.GhRelease())
+    return 0
+
+
+def _lake_pull(args: argparse.Namespace, settings: Settings) -> int:
+    """Restore the lake from the GitHub release."""
+    lake_release.pull(settings.lake_root, lake_release.GhRelease(), pdfs=args.pdfs)
+    return 0
+
+
+def _publish_data(args: argparse.Namespace, settings: Settings) -> int:
+    """Publish gold as a "Latest" GitHub Release (CSV + Parquet), if it changed."""
+    from warehouse import publish
+
+    out_dir = settings.lake_root / "gold"
+    exports = publish.export_gold(settings.duckdb_path, out_dir, publish.gold_tables())
+    publish.publish(exports, out_dir, datetime.now(UTC).date())
+    return 0
+
+
+def _run_all(args: argparse.Namespace, settings: Settings) -> int:
+    """The weekly run on a fresh machine: the lake release is the only state."""
+    steps = [
+        ("lake-pull", _lake_pull, argparse.Namespace(pdfs=False)),
+        ("ingest", _ingest_unless_down, argparse.Namespace(limit=None, new_only=True)),
+        ("extract", _extract, argparse.Namespace(redo=False, limit=None)),
+        # Push before dbt: a failing build (e.g. a new unmapped DOE name) must not lose new PDFs
+        ("lake-push", _lake_push, args),
+        ("transform", _transform, args),
+        ("publish-data", _publish_data, args),
+    ]
+    for name, handler, step_args in steps:
+        logger.info("run-all: %s", name)
+        if code := handler(step_args, settings):
+            return code
+    return 0
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -115,10 +149,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
     extract_cmd.set_defaults(handler=_extract)
     sub.add_parser("transform", help="dbt build: silver and gold").set_defaults(handler=_transform)
-    for name, (help_text, milestone) in PLANNED.items():
-        sub.add_parser(name, help=f"{help_text} (milestone {milestone})").set_defaults(
-            handler=_not_built
-        )
+    sub.add_parser("lake-push", help="Upload changed lake files to the release").set_defaults(
+        handler=_lake_push
+    )
+    pull = sub.add_parser("lake-pull", help="Restore bronze tables and manifest from the release")
+    pull.add_argument("--pdfs", action="store_true", help="Also restore every DOE PDF (~90 MB)")
+    pull.set_defaults(handler=_lake_pull)
+    sub.add_parser("publish-data", help="Release gold as open data if it changed").set_defaults(
+        handler=_publish_data
+    )
+    sub.add_parser("run-all", help="Run every stage in order (the weekly run)").set_defaults(
+        handler=_run_all
+    )
     return parser
 
 

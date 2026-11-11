@@ -1,12 +1,15 @@
-"""Tests for configuration loading and the CLI skeleton.
+"""Tests for configuration loading and the CLI.
 
 The autouse fixture in conftest.py clears all settings env vars before each test.
 """
 
+import urllib.error
+
 import pytest
 
 from config.settings import DEFAULT_LISTING_URL, load_settings
-from pipeline.cli import PLANNED, main
+from pipeline import cli
+from pipeline.cli import main
 
 
 def test_defaults_need_no_environment() -> None:
@@ -44,9 +47,26 @@ def test_cli_show_config_succeeds() -> None:
     assert main(["show-config"]) == 0
 
 
-@pytest.mark.parametrize("command", PLANNED)
-def test_unbuilt_commands_fail_loudly(command: str) -> None:
-    assert main([command]) == 2  # a scheduled run must never pass while doing nothing
+def test_run_all_stops_at_the_first_failing_step(monkeypatch: pytest.MonkeyPatch) -> None:
+    ran = []
+    for step in ("lake_pull", "ingest", "extract", "lake_push", "transform", "publish_data"):
+        code = 1 if step == "transform" else 0
+        monkeypatch.setattr(cli, f"_{step}", lambda a, s, n=step, c=code: ran.append(n) or c)
+    assert main(["run-all"]) == 1
+    assert ran == ["lake_pull", "ingest", "extract", "lake_push", "transform"]  # pushed first
+
+
+def test_ingest_is_skipped_only_when_doe_is_unreachable(monkeypatch: pytest.MonkeyPatch) -> None:
+    error: Exception = TimeoutError("timed out")
+
+    def failing_ingest(args, settings):
+        raise error
+
+    monkeypatch.setattr(cli, "_ingest", failing_ingest)
+    assert cli._ingest_unless_down(None, None) == 0
+    error = urllib.error.HTTPError("https://doe.gov.ph", 404, "Not Found", None, None)
+    with pytest.raises(urllib.error.HTTPError):  # a moved page needs a person, not a skip
+        cli._ingest_unless_down(None, None)
 
 
 def test_cli_config_error_exits_2_without_traceback(monkeypatch: pytest.MonkeyPatch) -> None:
