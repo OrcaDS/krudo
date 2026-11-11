@@ -38,7 +38,8 @@ layout eras is in `recon.md`; the rules are in `project.md` §6.3.
   so it is skipped.
 - **NCR-wide summary table** (2026, page 2 under the grid): `Product | Overall Range | Common
   Price` for Gasoline (RON97/100), (RON95), (RON91), Diesel, Diesel Plus, Kerosene. Not
-  extracted in v1: it lies outside the grid and repeats what the city rows give.
+  extracted in v1 (decided 2026-11-12): it lies outside the grid and repeats what the
+  city rows give.
 - **`NO LFRO`** (from 2024) is one label centred across both of a brand's sub-columns. Letter-only
   words closer than their height are joined, and a value across the brand's centre becomes a
   `brand_range` cell. Prices are never joined: in 2019 neighbouring price columns sit closer
@@ -61,3 +62,47 @@ failed). Two checks share no code with the extractor: for every report the value
 are on separate lines), and on every row the overall range equals the min and max of the brand
 prices, which would fail if a value landed under the wrong brand. A third check clusters each
 page's value x-positions into physical columns and confirms each maps to exactly one slot.
+
+## Metro matrix (era A)
+- **No cities**: one Metro Manila table per report, product rows × brand columns; `city_raw` is
+  NULL. 7 brands: Petron, Shell, Caltex, Total, Flying V, Unioil, Seaoil.
+- **Jan-Mar 2017** (`petro_mm_2017_january_03`): uppercase `PRODUCT CALTEX PETRON SHELL SEAOIL
+  FLYING V`, then a second block `PRODUCT UNIOIL TOTAL` with the same product rows. One cell per
+  brand, `41.40-47.05` or a lone price (`35.65`): `brand_range`. Empty rows in block 2 are
+  skipped. One typo kept raw: `42.45-48.799` (Feb 14).
+- **Apr 2017 on**: one block, low and high sub-columns per brand. `Overall Range` (two cells,
+  `overall_low` / `overall_high`) and `Common Price` columns from Aug 2017.
+- **Separate common-price tables**: Feb-Mar 2017 a small `Common Price` table right of the
+  grid, below `Effectivity` (product names like `Premium Plus RON 97`); Apr-Jul 2017 a
+  `COMMON PRICES OF PETROLEUM PRODUCTS IN METRO MANILA` table under the grid (on page 2 in
+  `petro_mm_2017_may31`). `Aug 2, 2017` has neither.
+- **Header labels wrap** over up to three lines and `Product` sits on any of them
+  (`petro_mm_2019_may_15`: `Flying` / `Common` above, `V` / `Overall Range` / `Price` below).
+  Words that overlap across lines, or sit on one line closer than their height, are one label.
+  `Coommon Price` (Jan 31, 2019) is a common label.
+- **Label positions vary label by label**: centred over a brand's two sub-columns (2017), over
+  the low one (Jul 2018), or a few points left of it (Jul 2017 `Flying V`), and a brand's
+  empty columns may be drawn narrower (Jan 2018 `Total`). So no rule from label positions held;
+  columns come from the prices, and the header only gives their order and count. The white
+  rectangles behind the text are not cell borders.
+- **A brand missing from the header**: `petro_mm_2018_january_12` / `_17` have no `Total` label
+  and no Total prices; the count still matches.
+- **Product names**: `Gasoline` on the line above `(RON97)` (2017-2018), on one line (2019), or
+  on their own line *under* each row of prices (`petro_mm_2017_mar31`, grid and common table).
+  `extract_text()` reads that report's prices as `39. 85`; `extract_words()` reads `39.85`.
+- **Effectivity**: `Effectivity: July 4, 2018` under the grid; `petro_mm_2017_september_27`
+  has none. There is no monitoring date (the title's `As of` date is the report date).
+- **DOE's own inconsistencies** (kept, flagged in silver): Unioil low above high on three
+  products in `petro_mm_2017_may18`, `_may31`, `_august_09` (values sit under Unioil's columns);
+  Total Diesel Plus low above high (`42.49` / `40.04`) on Feb 7, 2019, whose overall low (`40.45`)
+  skips Total's `40.04`;
+  overall range off the brand prices on Aug 2 and Aug 16, 2018 and Jan 31, 2019; Kerosene
+  common price `NONE` on Sep 6, 2018; `3700` (Seaoil Kerosene low, Aug 2, 2017; Seaoil has no high that row).
+
+## How era A was checked (milestone 5)
+A checker script read all 109 era A reports: all extract, none fail. Checks that share no code
+with the extractor: every price token of each page's `extract_text()` (minus title, date and
+`RON` numbers) is emitted exactly once; where an overall range exists it equals the min and max
+of the brand prices; each brand's low is at most its high; the common price lies in the brand
+range. The only misses are DOE's own inconsistencies listed above, each checked by hand
+against word positions.

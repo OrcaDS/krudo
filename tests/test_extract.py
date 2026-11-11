@@ -12,6 +12,7 @@ from ingestion.common.storage import LocalStorage
 from ingestion.doe import extract
 from ingestion.doe.classify import Unsupported
 from ingestion.doe.discover import Report
+from ingestion.doe.extract import city_grid
 from ingestion.doe.extract.city_grid import Cell
 
 NOW = datetime(2026, 11, 11, tzinfo=UTC)
@@ -54,7 +55,11 @@ def _fake_pdf(monkeypatch: pytest.MonkeyPatch, cells: list[Cell] | Exception) ->
         return cells
 
     monkeypatch.setattr(extract.pdfplumber, "open", lambda _: FakePdf())
-    monkeypatch.setitem(extract.EXTRACTORS, "B", extract.Extractor("city_grid", "1", fake_extract))
+    monkeypatch.setitem(
+        extract.EXTRACTORS,
+        "B",
+        extract.Extractor("city_grid", "1", fake_extract, city_grid.report_dates),
+    )
 
 
 def test_extracted_rows_land_in_one_file_per_pdf(
@@ -86,9 +91,11 @@ def test_unreadable_reports_fail_with_a_reason_and_redo_retries_them(
 
 
 def test_what_waits(storage: LocalStorage) -> None:
-    era_a = _entry(storage, "a.pdf", era="A")  # no extractor until milestone 5
+    unclassified = replace(_entry(storage, "a.pdf"), era=None)
     no_pdf = replace(_entry(storage, "b.pdf"), lake_path="bronze/missing.pdf")
     duplicate = replace(_entry(storage, "c.pdf"), status=FAILED, status_reason="same bytes")
-    for entry in (era_a, no_pdf, duplicate):
+    for entry in (unclassified, no_pdf, duplicate):
         assert not extract.needs_extract(entry, storage, redo=True)
-    assert not extract.needs_extract(replace(era_a, era="B", status=EXTRACTED), storage, redo=False)
+    assert not extract.needs_extract(
+        replace(unclassified, era="B", status=EXTRACTED), storage, redo=False
+    )

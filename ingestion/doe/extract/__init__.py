@@ -21,7 +21,7 @@ import pyarrow as pa
 from ingestion.common import manifest
 from ingestion.common.manifest import DOWNLOADED, EXTRACTED, FAILED, Entry
 from ingestion.common.storage import Storage
-from ingestion.doe.extract import city_grid
+from ingestion.doe.extract import city_grid, metro_matrix
 
 logger = logging.getLogger(__name__)
 
@@ -52,10 +52,15 @@ class Extractor:
     name: str
     version: str  # bump when the output for the same PDF changes
     extract: Callable[[Sequence[Sequence[dict]]], list[city_grid.Cell]]
+    dates: Callable[[Sequence[str]], tuple[str | None, str | None]]  # (monitoring, effectivity)
 
 
-_CITY_GRID = Extractor("city_grid", "1", city_grid.extract)
-EXTRACTORS = {"B": _CITY_GRID, "C": _CITY_GRID}
+_CITY_GRID = Extractor("city_grid", "1", city_grid.extract, city_grid.report_dates)
+EXTRACTORS = {
+    "A": Extractor("metro_matrix", "1", metro_matrix.extract, metro_matrix.report_dates),
+    "B": _CITY_GRID,
+    "C": _CITY_GRID,
+}
 
 
 def table_path(entry: Entry) -> str:
@@ -75,7 +80,7 @@ def extract_rows(pdf_bytes: bytes, entry: Entry, now: datetime) -> list[dict]:
         text = [p.dedupe_chars().extract_text() or "" for p in pdf.pages]
         lines = [line for page_text in text for line in page_text.splitlines()]
     cells = extractor.extract(pages)
-    monitoring, effectivity = city_grid.report_dates(lines)
+    monitoring, effectivity = extractor.dates(lines)
     return [
         {
             "report_date": entry.report_date,

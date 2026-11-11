@@ -43,7 +43,7 @@ _EFFECTIVITY = re.compile(r"Date of Effectivity\s*:?\s*(.*?)\s*$", re.I)
 @dataclass(frozen=True)
 class Cell:
     page: int
-    city: str
+    city: str | None  # None in era A (metro-wide)
     product: str
     brand: str | None  # None for the overall range and common price
     kind: str  # brand_low | brand_high | overall_range | common
