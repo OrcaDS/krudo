@@ -105,7 +105,7 @@ bronze/files/doe/ncr/year=2026/<name>.pdf
 bronze/tables/doe_prices/year=2026/part-<report_date>-<pdf name>.parquet
 bronze/manifest.parquet
 ```
-Bronze row (**all text, exactly as extracted**): `report_date`, `era`, `title_raw`, `monitoring_period_raw`, `effectivity_raw`, `city_raw` (NULL in era A), `product_raw`, `brand_raw` (NULL for the summary columns), `cell_kind` ∈ {`brand_low`, `brand_high`, `brand_range`, `overall_range`, `common`}, `value_raw`, `source_file`, `page`, `extractor_version`, `ingested_at`.
+Bronze row (**all text, exactly as extracted**): `report_date`, `era`, `title_raw`, `monitoring_period_raw`, `effectivity_raw`, `city_raw` (NULL in era A), `product_raw`, `brand_raw` (NULL for the summary columns), `cell_kind` ∈ {`brand_low`, `brand_high`, `brand_range`, `overall_range` (B/C, one cell), `overall_low`, `overall_high` (A, two cells), `common`}, `value_raw`, `source_file`, `page`, `extractor_version`, `ingested_at`.
 One file per PDF, so a revised report never overwrites the original (silver keeps the newest); re-extracting a PDF overwrites its own file.
 
 ### 6.3 Extract
@@ -113,7 +113,7 @@ One file per PDF, so a revised report never overwrites the original (silver keep
 
 | Era | Title starts with | Extractor | Output |
 |---|---|---|---|
-| A (Jan 2017 → Sep 2019) | `PREVAILING RETAIL PRICES OF PETROLEUM PRODUCTS IN METRO MANILA` | `metro_matrix` | product × brand, cell `low-high` or single → `brand_range`; brands in two stacked blocks |
+| A (Jan 2017 → Sep 2019) | `PREVAILING RETAIL PRICES OF PETROLEUM PRODUCTS IN METRO MANILA` | `metro_matrix` | product × brand. Jan–Mar 2017: brands in two stacked blocks, cell `low-high` or single → `brand_range`. Apr 2017 on: low/high sub-columns → `brand_low`/`brand_high`, plus (Aug 2017 on) overall range → `overall_low`/`overall_high` and common price; Feb–Jul 2017 print common prices in a separate table |
 | B (Jun 2019 → Feb 2024; overlaps A in Sep 2019) | `NCR Prevailing Retail Pump Price as of` (also `( As of: …)`, `as ofJuly …`) | `city_grid` | city × product × brand low/high + overall range + common |
 | C (Mar 2024 →) | letterhead, then `Price Monitoring of Liquid Fuels` / `NCR` / `(For the week of …)` or `(For the period of …)` | `city_grid` | same as B |
 
@@ -123,6 +123,8 @@ One file per PDF, so a revised report never overwrites the original (silver keep
 - Use `dedupe_chars()` for doubled bold text; split overlapping city labels by x-position.
 - Map columns by header text, not position, so a new brand column is picked up.
 - A label across both of a brand's sub-columns (`NO LFRO`) is one `brand_range` cell.
+
+`metro_matrix` rules: era A labels sit centred, over the low sub-column, or off both, label by label, so columns come from the **prices' x-positions**. Empty columns are filled in from the header's slot count (two per brand and for the overall range, one for common) at the gaps that best fit the column pitch; any other count raises `Unsupported`.
 
 A layout the extractor can't read raises `Unsupported`: the report is marked `failed` with the reason, and the run continues. Every new quirk goes into `docs/parsing_notes.md`.
 
