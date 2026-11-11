@@ -32,3 +32,5 @@ transform/logs/
 .idea/
 .DS_Store
 Thumbs.db
+# built by tests/fixtures/build_bronze.py from the committed CSVs
+tests/fixtures/parquet/

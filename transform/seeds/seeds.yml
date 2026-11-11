@@ -1,0 +1,46 @@
+version: 2
+
+seeds:
+  - name: cities
+    description: >-
+      DOE city label -> canonical city. Keys are in `normalize_name` form (upper case,
+      single spaces). `CMALAOKOACTAI NC ICTYITY` is DOE's 6 and 13 Jan 2026 reports, where
+      "Makati City" is typed over "Caloocan City" (see docs/parsing_notes.md).
+    config:
+      column_types: {city_raw: varchar, city: varchar}
+    columns:
+      - name: city_raw
+        data_tests: [unique, not_null]
+      - name: city
+        data_tests: [not_null]
+
+  - name: brands
+    description: DOE brand column label -> canonical brand.
+    config:
+      column_types: {brand_raw: varchar, brand: varchar}
+    columns:
+      - name: brand_raw
+        data_tests: [unique, not_null]
+      - name: brand
+        data_tests: [not_null]
+
+  - name: products
+    description: >-
+      DOE product label -> canonical product, family and octane (RON; blank for diesel and
+      kerosene). Era A's common-price tables say "Premium RON 95" / "Premium Plus RON 97".
+    config:
+      column_types: {product_raw: varchar, product: varchar, family: varchar, octane: integer}
+    columns:
+      - name: product_raw
+        data_tests: [unique, not_null]
+      - name: product
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [RON 91, RON 95, RON 97, RON 100, Diesel, Diesel Plus, Kerosene]
+      - name: family
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [gasoline, diesel, kerosene]

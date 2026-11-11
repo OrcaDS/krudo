@@ -18,7 +18,10 @@ FROM python:3.12.10-slim-bookworm AS runtime
 RUN useradd --create-home --uid 10001 pipeline
 WORKDIR /app
 COPY --from=builder --chown=pipeline:pipeline /app/.venv /app/.venv
-ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1
+COPY transform ./transform
+# dbt's own scratch dirs: keep them out of the (read-only) project dir
+ENV PATH="/app/.venv/bin:$PATH" PYTHONUNBUFFERED=1 \
+    DBT_TARGET_PATH=/tmp/dbt/target DBT_LOG_PATH=/tmp/dbt/logs
 # The default LAKE_ROOT (./lake, also in .env.example) resolves here; mount a volume on it
 RUN mkdir /app/lake && chown pipeline:pipeline /app/lake
 USER pipeline

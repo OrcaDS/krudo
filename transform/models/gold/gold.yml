@@ -1,0 +1,103 @@
+version: 2
+
+models:
+  - name: fct_pump_prices
+    description: >-
+      Weekly pump price range per brand: week x geo_level x city x brand x product. Era A
+      (Jan 2017 - Sep 2019) is metro-wide (geo_level 'metro', city NULL); from Jun 2019 DOE
+      reports by city. NULL price = DOE gave none (blank, NO LFRO, 0).
+    data_tests:
+      - unique:
+          arguments:
+            column_name: "week_start || geo_level || coalesce(city, '') || brand || product"
+    columns:
+      - name: week_start
+        data_tests: [not_null]
+      - name: report_date
+        data_tests: [not_null]
+      - name: geo_level
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [metro, city]
+      - name: city
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_city')
+                field: city
+      - name: brand
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_brand')
+                field: brand
+      - name: product
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_product')
+                field: product
+      - name: is_low_above_high
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [false]
+              config:
+                severity: warn
+      - name: source_file
+        data_tests: [not_null]
+
+  - name: fct_ncr_summary
+    description: >-
+      DOE's weekly summary per city and product: the overall low-high range across brands
+      and the common (most frequent) price. Era A gives these metro-wide.
+    data_tests:
+      - unique:
+          arguments:
+            column_name: "week_start || geo_level || coalesce(city, '') || product"
+    columns:
+      - name: week_start
+        data_tests: [not_null]
+      - name: geo_level
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [metro, city]
+      - name: city
+        data_tests:
+          - relationships:
+              arguments:
+                to: ref('dim_city')
+                field: city
+      - name: product
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_product')
+                field: product
+      - name: is_low_above_high
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [false]
+              config:
+                severity: warn
+
+  - name: dim_city
+    columns:
+      - name: city
+        data_tests: [unique, not_null]
+  - name: dim_brand
+    columns:
+      - name: brand
+        data_tests: [unique, not_null]
+  - name: dim_product
+    columns:
+      - name: product
+        data_tests: [unique, not_null]

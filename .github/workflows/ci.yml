@@ -24,6 +24,12 @@ jobs:
         run: uv run ruff format --check .
       - name: Tests
         run: uv run pytest -q
+      - name: dbt build on fixture bronze
+        run: |
+          uv run python tests/fixtures/build_bronze.py
+          uv run krudo transform
+        env:
+          LAKE_ROOT: tests/fixtures/parquet
 
   docker-build:
     runs-on: ubuntu-24.04

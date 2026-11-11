@@ -99,6 +99,24 @@ page's value x-positions into physical columns and confirms each maps to exactly
   overall range off the brand prices on Aug 2 and Aug 16, 2018 and Jan 31, 2019; Kerosene
   common price `NONE` on Sep 6, 2018; `3700` (Seaoil Kerosene low, Aug 2, 2017; Seaoil has no high that row).
 
+## Found in silver/gold (milestone 6)
+- **Overlapping city labels, same spot**: on page 2 of `ncr_price_monitoring_01062026` and
+  `_01132026`, "Makati City" is typed exactly over "Caloocan City" (same x and y), so the label
+  reads `CMalaokoactai nC iCtyity`. It is Makati: Caloocan has its own block on page 1, and
+  Makati sits in this block in the reports before and after. Bronze keeps the text; the
+  `cities` seed maps it to Makati.
+- **Title date of the wrong week**: `petro_ncr_2021_dec_21` says "as of December 14, 2021"; its
+  file name, link and monitoring period say December 21.
+- **Stale effectivity date**: `petro_ncr_2019_november_19` says effectivity "November 12, 2019"
+  (last week's); its monitoring period is November 19-21. So `week_start` reads the monitoring
+  period first. Holidays push the monitoring start to Wednesday or Thursday in 6 other
+  reports; `week_start` is that week's Tuesday either way.
+- **Era B typos** (kept, flagged `is_out_of_bounds` in gold): Petron RON 91 low `2.68` in
+  Caloocan (Dec 21, 2021, also the overall low); Petron Diesel Plus high `850.31` in Manila
+  (Nov 17, 2022, also the overall high).
+- **0 / 0.00 prices**: 69 brand cells and 45 overall ranges print `0.00` where other weeks have
+  a blank; silver reads 0 as NULL.
+
 ## How era A was checked (milestone 5)
 A checker script read all 109 era A reports: all extract, none fail. Checks that share no code
 with the extractor: every price token of each page's `extract_text()` (minus title, date and
