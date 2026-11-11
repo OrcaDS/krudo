@@ -1,0 +1,19 @@
+product_raw,product,family,octane
+DIESEL,Diesel,diesel,
+DIESEL PLUS,Diesel Plus,diesel,
+GASOLINE (RON 100),RON 100,gasoline,100
+GASOLINE (RON 91),RON 91,gasoline,91
+GASOLINE (RON 95),RON 95,gasoline,95
+GASOLINE (RON 97),RON 97,gasoline,97
+GASOLINE (RON100),RON 100,gasoline,100
+GASOLINE (RON91),RON 91,gasoline,91
+GASOLINE (RON95),RON 95,gasoline,95
+GASOLINE (RON97),RON 97,gasoline,97
+GASOLINE RON 91,RON 91,gasoline,91
+KEROSENE,Kerosene,kerosene,
+PREMIUM PLUS RON 97,RON 97,gasoline,97
+PREMIUM RON 95,RON 95,gasoline,95
+RON 100,RON 100,gasoline,100
+RON 91,RON 91,gasoline,91
+RON 95,RON 95,gasoline,95
+RON 97,RON 97,gasoline,97

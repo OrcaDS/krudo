@@ -1,0 +1,45 @@
+version: 2
+
+sources:
+  - name: bronze
+    description: >-
+      Raw rows from `krudo ingest` and `krudo extract`, all text, exactly as in the PDFs.
+      Views over the lake's Parquet, created by the `register_bronze` macro at the start
+      of each run.
+    schema: bronze
+    tables:
+      - name: doe_prices
+        description: One row per price cell read from a DOE NCR report (project.md §6.2).
+        columns:
+          - name: report_date
+            data_tests: [not_null]
+          - name: era
+            data_tests:
+              - accepted_values:
+                  arguments:
+                    values: [A, B, C]
+          - name: cell_kind
+            data_tests:
+              - accepted_values:
+                  arguments:
+                    values: [brand_low, brand_high, brand_range, overall_range, overall_low, overall_high, common]
+          - name: product_raw
+            data_tests: [not_null]
+          - name: source_file
+            data_tests: [not_null]
+      - name: manifest
+        description: One row per downloaded DOE file, with its status (project.md §6.1).
+        columns:
+          - name: file_name
+            data_tests: [unique, not_null]
+          - name: status
+            description: Every downloaded report is extracted or failed with a reason; none is skipped.
+            data_tests:
+              - accepted_values:
+                  arguments:
+                    values: [extracted, failed]
+          - name: status_reason
+            data_tests:
+              - not_null:
+                  config:
+                    where: status = 'failed'

@@ -134,10 +134,11 @@ A layout the extractor can't read raises `Unsupported`: the report is marked `fa
   - Split `low-high` / `low - high` ranges.
   - Canonical names come from seeds: `cities.csv` (fixes `Para�aque` etc.), `brands.csv`, `products.csv`. An unmapped name fails the run and logs the name.
   - Keep the newest download per report date.
-  - `week_start` = effectivity date when stated, else the start of the "For the week of" range, else report date (era A). Keep `report_date` as well.
+  - `week_start` = the Tuesday (DOE's price adjustment day) of the week given by the monitoring period's start, else the effectivity date, else the report date. Effectivity comes second because DOE once copied it stale from the week before; holidays move the monitoring start to Wednesday or Thursday, which map to the same Tuesday (2026-11-12). Keep `report_date` as well.
 - **gold:**
   - `fct_pump_prices`: week_start × geo_level (`metro` | `city`) × city × brand × product, with `price_low`, `price_high`, `source_file`. Era A rows have `geo_level = 'metro'`, `city = NULL`.
-  - `fct_ncr_summary`: week_start × city × product, with `overall_low`, `overall_high`, `common_price` (eras B/C).
+  - `fct_ncr_summary`: week_start × geo_level × city × product, with `overall_low`, `overall_high`, `common_price`. Era A has these metro-wide too (overall range from Aug 2017), so it is included like in `fct_pump_prices` (2026-11-12).
+  - Both facts carry `is_low_above_high` and `is_out_of_bounds` flags (₱20–₱200); 0 / 0.00 prices are NULL.
   - `dim_city`, `dim_brand`, `dim_product` (product family: gasoline / diesel / kerosene; octane).
 - `docs/data_dictionary.md`: every gold column, plus attribution: "Source: Department of Energy – Oil Industry Management Bureau, NCR price monitoring. Public domain."
 

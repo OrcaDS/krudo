@@ -1,0 +1,30 @@
+# dbt project for silver and gold. Run it through `krudo transform`, which passes the
+# lake and DuckDB paths from config/settings.py as vars.
+name: krudo
+version: "0.1.0"
+config-version: 2
+profile: krudo
+
+model-paths: ["models"]
+macro-paths: ["macros"]
+seed-paths: ["seeds"]
+test-paths: ["tests"]
+
+vars:
+  lake_root: "../lake"  # overridden by `krudo transform`
+  # Plausible pump price range (PHP per litre): prices outside it are flagged, never dropped
+  price_min: 20
+  price_max: 200
+
+on-run-start:
+  - "{{ register_bronze() }}"
+
+flags:
+  send_anonymous_usage_stats: false
+
+models:
+  krudo:
+    silver:
+      +materialized: view
+    gold:
+      +materialized: table

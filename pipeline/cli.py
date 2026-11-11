@@ -8,10 +8,12 @@ from __future__ import annotations
 
 import argparse
 import dataclasses
+import json
 import logging
 import sys
 from collections.abc import Sequence
 from datetime import UTC, datetime
+from pathlib import Path
 
 from config.settings import Settings, load_settings
 from ingestion.common import manifest
@@ -19,10 +21,10 @@ from ingestion.common.storage import get_storage
 from ingestion.doe import classify, discover, download, extract
 
 logger = logging.getLogger("krudo")
+TRANSFORM_DIR = Path("transform")  # the dbt project; commands run from the repo root (or /app)
 
 # Stages not built yet, with the milestone that builds them (project.md §10)
 PLANNED = {
-    "transform": ("dbt build: silver and gold", 6),
     "lake-push": ("Upload changed lake files to the release", 7),
     "lake-pull": ("Restore the lake from the release", 7),
     "publish-data": ("Release gold as open data if it changed", 7),
@@ -65,6 +67,28 @@ def _extract(args: argparse.Namespace, settings: Settings) -> int:
     return 0
 
 
+def _transform(args: argparse.Namespace, settings: Settings) -> int:
+    """Build silver and gold with dbt (models, seeds and tests) over the local bronze."""
+    from dbt.cli.main import dbtRunner  # slow import; only this command needs it
+
+    dbt_vars = {
+        "lake_root": settings.lake_root.resolve().as_posix(),
+        "duckdb_path": settings.duckdb_path.resolve().as_posix(),
+    }
+    result = dbtRunner().invoke(
+        [
+            "build",
+            "--project-dir",
+            str(TRANSFORM_DIR),
+            "--profiles-dir",
+            str(TRANSFORM_DIR),
+            "--vars",
+            json.dumps(dbt_vars),
+        ]
+    )
+    return 0 if result.success else 1
+
+
 def _not_built(args: argparse.Namespace, settings: Settings) -> int:
     logger.error("'%s' is not built yet (milestone %d)", args.command, PLANNED[args.command][1])
     return 2
@@ -90,6 +114,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--redo", action="store_true", help="Also re-extract extracted and failed reports"
     )
     extract_cmd.set_defaults(handler=_extract)
+    sub.add_parser("transform", help="dbt build: silver and gold").set_defaults(handler=_transform)
     for name, (help_text, milestone) in PLANNED.items():
         sub.add_parser(name, help=f"{help_text} (milestone {milestone})").set_defaults(
             handler=_not_built

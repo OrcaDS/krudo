@@ -1,0 +1,8 @@
+# Local DuckDB only; no secrets. `krudo transform` passes duckdb_path from config/settings.py.
+krudo:
+  target: local
+  outputs:
+    local:
+      type: duckdb
+      path: "{{ var('duckdb_path', '../lake/krudo.duckdb') }}"
+      threads: 4
