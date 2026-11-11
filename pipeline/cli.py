@@ -16,13 +16,12 @@ from datetime import UTC, datetime
 from config.settings import Settings, load_settings
 from ingestion.common import manifest
 from ingestion.common.storage import get_storage
-from ingestion.doe import classify, discover, download
+from ingestion.doe import classify, discover, download, extract
 
 logger = logging.getLogger("krudo")
 
 # Stages not built yet, with the milestone that builds them (project.md §10)
 PLANNED = {
-    "extract": ("Extract downloaded reports into bronze rows", 4),
     "transform": ("dbt build: silver and gold", 6),
     "lake-push": ("Upload changed lake files to the release", 7),
     "lake-pull": ("Restore the lake from the release", 7),
@@ -59,6 +58,13 @@ def _ingest(args: argparse.Namespace, settings: Settings) -> int:
     return 0
 
 
+def _extract(args: argparse.Namespace, settings: Settings) -> int:
+    """Extract classified reports into bronze rows."""
+    storage = get_storage(settings)
+    extract.extract_pending(storage, manifest.load(storage), redo=args.redo, limit=args.limit)
+    return 0
+
+
 def _not_built(args: argparse.Namespace, settings: Settings) -> int:
     logger.error("'%s' is not built yet (milestone %d)", args.command, PLANNED[args.command][1])
     return 2
@@ -78,6 +84,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Skip reports already downloaded, even if their PDF is not in this lake",
     )
     ingest.set_defaults(handler=_ingest)
+    extract_cmd = sub.add_parser("extract", help="Extract classified reports into bronze rows")
+    extract_cmd.add_argument("--limit", type=_positive, help="Extract at most N reports")
+    extract_cmd.add_argument(
+        "--redo", action="store_true", help="Also re-extract extracted and failed reports"
+    )
+    extract_cmd.set_defaults(handler=_extract)
     for name, (help_text, milestone) in PLANNED.items():
         sub.add_parser(name, help=f"{help_text} (milestone {milestone})").set_defaults(
             handler=_not_built

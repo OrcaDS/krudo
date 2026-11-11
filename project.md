@@ -102,11 +102,11 @@ krudo/
 ### 6.2 Bronze layout
 ```
 bronze/files/doe/ncr/year=2026/<name>.pdf
-bronze/tables/doe_prices/year=2026/part-<report_date>.parquet
+bronze/tables/doe_prices/year=2026/part-<report_date>-<pdf name>.parquet
 bronze/manifest.parquet
 ```
 Bronze row (**all text, exactly as extracted**): `report_date`, `era`, `title_raw`, `monitoring_period_raw`, `effectivity_raw`, `city_raw` (NULL in era A), `product_raw`, `brand_raw` (NULL for the summary columns), `cell_kind` ∈ {`brand_low`, `brand_high`, `brand_range`, `overall_range`, `common`}, `value_raw`, `source_file`, `page`, `extractor_version`, `ingested_at`.
-Re-extracting a report overwrites its own file.
+One file per PDF, so a revised report never overwrites the original (silver keeps the newest); re-extracting a PDF overwrites its own file.
 
 ### 6.3 Extract
 `classify.py` picks the era from the title line:
@@ -122,6 +122,7 @@ Re-extracting a report overwrites its own file.
 - City label sits on the middle row of its block; group rows into cities by y-position between labels.
 - Use `dedupe_chars()` for doubled bold text; split overlapping city labels by x-position.
 - Map columns by header text, not position, so a new brand column is picked up.
+- A label across both of a brand's sub-columns (`NO LFRO`) is one `brand_range` cell.
 
 A layout the extractor can't read raises `Unsupported`: the report is marked `failed` with the reason, and the run continues. Every new quirk goes into `docs/parsing_notes.md`.
 
