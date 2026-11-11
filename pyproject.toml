@@ -5,6 +5,7 @@ description = "NCR Pump Price Tracker: medallion pipeline turning DOE's weekly M
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "pdfplumber>=0.11",
     "pyarrow>=17",
 ]
 

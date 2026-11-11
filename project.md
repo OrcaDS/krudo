@@ -50,8 +50,8 @@ Same as tawad, minus BigQuery:
 | Layer | Choice | Notes |
 |---|---|---|
 | Language | Python 3.11+, `uv` | |
-| HTTP | `requests` | |
-| PDF extraction | `pdfplumber` | All sampled PDFs have a text layer; no OCR |
+| HTTP | stdlib `urllib` | Copied from tawad's polite fetcher; no extra dependency (decided 2026-11-11) |
+| PDF extraction | `pdfplumber` | 483 of 485 PDFs have a text layer; the 2 scanned ones are marked failed (no OCR) |
 | Bronze format | Parquet via `pyarrow`, explicit schemas, snappy | |
 | Lake storage | Local lake, copied to and from a `lake` GitHub **prerelease** (`krudo lake-push` / `lake-pull`) | Same as tawad; free, no card |
 | Transform | dbt Core + `dbt-duckdb` | |
@@ -92,7 +92,7 @@ krudo/
 
 ### 6.1 Discover and download → bronze/files
 - One `GET` of `https://doe.gov.ph/data-and-prices/liquid-fuels/retail-pump-prices/ncr-pump-prices` lists every NCR report (~488 links, no pagination, server-rendered). Parse `<a href>` pointing at `prod-cms.doe.gov.ph/documents/` or `*.cloudfront.net/api/media/file/`. Upgrade `http://` to `https://`.
-- Save each file untouched to `bronze/files/doe/ncr/year=YYYY/<safe_name>.pdf`. Manifest row: url, link text, download time, sha256, report date (after classify), era, status, status_reason.
+- Save each file untouched to `bronze/files/doe/ncr/year=YYYY/<safe_name>.pdf`, where YYYY is the year row the link sits in on DOE's page (known before download; the report date is only known after reading the PDF). Manifest row: url, link text, download time, sha256, report date (after classify), era, status, status_reason.
 - **Report date comes from the PDF title, never the URL**; link text is a fallback only (see recon §3). Unparseable → `failed`, reason recorded.
 - Duplicate links (e.g. two `2020 january_03`) and files with the same bytes as another report → `failed (same bytes as …)`, never extracted.
 - Revised files (`_updated`, `_revised`, `_edited`, `_0`) replace the original for the same report date: keep both in bronze, and silver keeps the newest download.
@@ -113,9 +113,9 @@ Re-extracting a report overwrites its own file.
 
 | Era | Title starts with | Extractor | Output |
 |---|---|---|---|
-| A (2017 → ~Nov 2019) | `PREVAILING RETAIL PRICES OF PETROLEUM PRODUCTS IN METRO MANILA` | `metro_matrix` | product × brand, cell `low-high` or single → `brand_range`; brands in two stacked blocks |
-| B (Dec 2019 → ~2024) | `NCR Prevailing Retail Pump Price as of` | `city_grid` | city × product × brand low/high + overall range + common |
-| C (2025 →) | letterhead, then `Price Monitoring of Liquid Fuels` / `NCR` / `(For the week of …)` | `city_grid` | same as B |
+| A (Jan 2017 → Sep 2019) | `PREVAILING RETAIL PRICES OF PETROLEUM PRODUCTS IN METRO MANILA` | `metro_matrix` | product × brand, cell `low-high` or single → `brand_range`; brands in two stacked blocks |
+| B (Jun 2019 → Feb 2024; overlaps A in Sep 2019) | `NCR Prevailing Retail Pump Price as of` (also `( As of: …)`, `as ofJuly …`) | `city_grid` | city × product × brand low/high + overall range + common |
+| C (Mar 2024 →) | letterhead, then `Price Monitoring of Liquid Fuels` / `NCR` / `(For the week of …)` or `(For the period of …)` | `city_grid` | same as B |
 
 `city_grid` rules (recon §5):
 - Build column bands from the **header row's word x-positions** (each brand has a low and a high sub-column). Assign every price word to a band by its x-centre. Never split lines by position count: blank cells shift them.
