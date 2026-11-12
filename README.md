@@ -74,7 +74,7 @@ The data is Philippine government work, which has no copyright (RA 8293 §176). 
 ## How it works
 
 ```mermaid
-flowchart LR
+flowchart TB
     doe["DOE website<br/>weekly NCR pump price PDFs"]
 
     subgraph run["krudo run-all · weekly GitHub Action in the GHCR Docker image"]
@@ -84,7 +84,7 @@ flowchart LR
         extract["extract<br/>era A · B · C parsers<br/>(pdfplumber)"]
         bronze[("bronze tables<br/>raw text, Parquet")]
         silver["silver<br/>stg_doe_prices<br/>(dbt + DuckDB)"]
-        gold[("gold<br/>fct_pump_prices · fct_ncr_summary<br/>dim_city · dim_brand · dim_product")]
+        gold[("gold<br/>fct_pump_prices<br/>fct_ncr_summary<br/>dim_city, dim_brand,<br/>dim_product")]
         ingest --> pdfs --> extract --> bronze --> silver --> gold
     end
 
