@@ -73,11 +73,7 @@ The data is Philippine government work, which has no copyright (RA 8293 §176). 
 
 ## How it works
 
-```
-DOE website ──▶ download PDFs ──▶ bronze ──▶ silver ──▶ gold ──▶ GitHub Release
-                (Python)          raw text   cleaned    tables    (Parquet + CSV)
-                                  (Parquet)  (dbt + DuckDB)
-```
+![Architecture: DOE weekly pump price PDFs → Python ingest and extract → bronze Parquet → dbt + DuckDB silver and gold → GitHub Release open data (CSV + Parquet), run weekly by GitHub Actions in a Docker image, with pipeline state kept in a lake prerelease](docs/architecture.png)
 
 A medallion pipeline, built the same way as its sister project [tawad](https://github.com/OrcaDS/tawad) (DA food prices):
 
