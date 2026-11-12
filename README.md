@@ -7,6 +7,58 @@ The Department of Energy (DOE) checks retail fuel prices at Metro Manila (NCR) g
 
 **[Download the data](../../releases/latest)** · [Data dictionary](docs/data_dictionary.md)
 
+## Findings
+
+All numbers come from the [example queries](warehouse/queries/) on the gold tables (DOE's "common price", the price most stations charged, unless noted; flagged typos excluded). They run as-is on `lake/krudo.duckdb`, or on the release Parquet files after `CREATE VIEW fct_ncr_summary AS FROM '<url>'`.
+
+### 1. Diesel went from ₱57 to ₱148 a litre in five weeks in 2026
+
+Through February 2026 diesel sat at about ₱57/L across Metro Manila. From the 10 March adjustment it rose every week, peaking at ₱147.76 on 7 April, 2.6 times its February price, then fell back to about ₱70 by the end of June. ([`diesel_spike_2026.sql`](warehouse/queries/diesel_spike_2026.sql))
+
+```mermaid
+xychart-beta
+    title "Diesel, NCR weekly common price, 2026 (₱/L)"
+    x-axis ["3 Feb", "17 Feb", "3 Mar", "10 Mar", "17 Mar", "24 Mar", "31 Mar", "7 Apr", "14 Apr", "21 Apr", "28 Apr", "12 May", "26 May", "9 Jun", "23 Jun"]
+    y-axis "₱/L" 0 --> 160
+    line [57.6, 57.4, 59.4, 81.5, 103.3, 119.1, 131.6, 147.8, 122.8, 97.8, 83.9, 77.7, 82.6, 81.2, 69.2]
+```
+
+### 2. Diesel used to be ₱10–12 cheaper than gasoline. Not any more
+
+From 2017 to 2021, diesel averaged ₱10–12 a litre less than RON 91 gasoline every year. The gap closed in 2022, shrank to ₱1.32 in 2025, and in 2026 diesel is ₱8.82 *dearer* on average. ([`diesel_vs_gasoline.sql`](warehouse/queries/diesel_vs_gasoline.sql))
+
+```mermaid
+xychart-beta
+    title "Diesel minus RON 91, yearly average (₱/L)"
+    x-axis ["2017", "2018", "2019", "2020", "2021", "2022", "2023", "2024", "2025", "2026"]
+    y-axis "₱/L" -14 --> 10
+    bar [-12.09, -9.97, -9.88, -11.94, -12.11, 0.57, -4.07, -3.87, -1.32, 8.82]
+```
+
+### 3. Unbranded stations are about ₱2.40 cheaper; Total, Shell and Caltex charge more
+
+Compared with the other brands in the same city and week, unbranded (`Independent`) stations and Flying V sold diesel about ₱2.20–2.40 a litre below average, while Total, Shell and Caltex sold it ₱1.10–1.90 above. That is roughly ₱170 between the cheapest and the dearest brand on a 40-litre tank. RON 91 shows the same order. ([`brand_gap.sql`](warehouse/queries/brand_gap.sql), city reports from June 2019)
+
+```mermaid
+xychart-beta horizontal
+    title "Diesel: brand price vs city average (₱/L)"
+    x-axis ["Independent", "Flying V", "PTT", "Seaoil", "Petron", "Unioil", "Phoenix", "Caltex", "Shell", "Total"]
+    y-axis "₱/L" -3 --> 2
+    bar [-2.37, -2.21, -0.74, -0.32, -0.23, -0.02, 0.16, 1.14, 1.44, 1.89]
+```
+
+### 4. Quezon City has the cheapest diesel, Taguig and Makati the dearest
+
+Among the cities DOE has tracked for five years or more, Quezon City's common diesel price averaged ₱1.69 below the NCR average for the same week, and Pasig ₱0.88 below. Taguig (₱0.88 above) and Makati (₱0.76 above) were the most expensive. ([`city_gap.sql`](warehouse/queries/city_gap.sql))
+
+```mermaid
+xychart-beta horizontal
+    title "Diesel: city price vs NCR average (₱/L)"
+    x-axis ["Quezon City", "Pasig", "Parañaque", "Manila", "Muntinlupa", "Caloocan", "Pasay", "Makati", "Taguig"]
+    y-axis "₱/L" -2 --> 1
+    bar [-1.69, -0.88, -0.06, 0.04, 0.35, 0.43, 0.50, 0.76, 0.88]
+```
+
 ## Quickstart
 
 Every file has a fixed URL that always points to the latest release:
