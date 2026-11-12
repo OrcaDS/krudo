@@ -73,29 +73,7 @@ The data is Philippine government work, which has no copyright (RA 8293 §176). 
 
 ## How it works
 
-```mermaid
-flowchart TB
-    doe["DOE website<br/>weekly NCR pump price PDFs"]
-
-    subgraph run["krudo run-all · weekly GitHub Action in the GHCR Docker image"]
-        direction LR
-        ingest["ingest<br/>discover · download · classify era"]
-        pdfs[("bronze PDFs<br/>+ manifest")]
-        extract["extract<br/>era A · B · C parsers<br/>(pdfplumber)"]
-        bronze[("bronze tables<br/>raw text, Parquet")]
-        silver["silver<br/>stg_doe_prices<br/>(dbt + DuckDB)"]
-        gold[("gold<br/>fct_pump_prices<br/>fct_ncr_summary<br/>dim_city, dim_brand,<br/>dim_product")]
-        ingest --> pdfs --> extract --> bronze --> silver --> gold
-    end
-
-    lake[("lake prerelease<br/>pipeline state")]
-    release[("Latest GitHub Release<br/>Parquet + CSV + data dictionary")]
-
-    doe --> ingest
-    lake -- "lake-pull" --> run
-    run -- "lake-push" --> lake
-    gold -- "publish-data<br/>(only if changed)" --> release
-```
+![Architecture: DOE weekly pump price PDFs → Python ingest and extract → bronze Parquet → dbt + DuckDB silver and gold → GitHub Release open data (CSV + Parquet), run weekly by GitHub Actions in a Docker image, with pipeline state kept in a lake prerelease](docs/architecture.png)
 
 A medallion pipeline, built the same way as its sister project [tawad](https://github.com/OrcaDS/tawad) (DA food prices):
 
