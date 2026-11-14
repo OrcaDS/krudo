@@ -5,7 +5,7 @@
 
 The Department of Energy (DOE) checks retail fuel prices at Metro Manila (NCR) gas stations every week. It publishes the results only as PDFs, which have used three different layouts since 2017, and offers no API. krudo reads every one of those reports, close to 500 so far, and turns them into one clean table: **weekly pump prices by city, brand and product, January 2017 to now**, about 95,000 rows. A GitHub Action updates it every week, and it's free to download as Parquet or CSV.
 
-**[Download the data](../../releases/latest)** · [Data dictionary](docs/data_dictionary.md)
+**[Download the data](../../releases/latest)** · [Also on Kaggle](https://www.kaggle.com/datasets/gemoyakurtl/metro-manila-pump-prices) · [Data dictionary](docs/data_dictionary.md)
 
 ## Findings
 

@@ -37,3 +37,19 @@ jobs:
             "ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/krudo-pipeline:latest" run-all
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - uses: actions/checkout@v7 # for kaggle/dataset-metadata.json
+      - uses: astral-sh/setup-uv@v10.3.3
+      # Kaggle mirror: a new version only when this run published a new data release
+      - name: Mirror new data to Kaggle
+        run: |
+          tag=$(gh release view --json tagName -q .tagName)
+          if [ "$tag" != "data-$(date -u +%F)" ]; then echo "No release today ($tag); Kaggle unchanged"; exit 0; fi
+          mkdir "$RUNNER_TEMP/kaggle" && cd "$RUNNER_TEMP/kaggle"
+          gh release download "$tag"
+          unzip -q krudo_gold_csv.zip && rm krudo_gold_csv.zip # Kaggle previews loose CSVs only
+          cp "$GITHUB_WORKSPACE/kaggle/dataset-metadata.json" .
+          uvx --with six kaggle==2.2.5 datasets version -p . -m "GitHub release $tag"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+          KAGGLE_API_TOKEN: ${{ secrets.KAGGLE_API_TOKEN }}
