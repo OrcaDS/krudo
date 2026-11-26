@@ -1,4 +1,6 @@
-# krudo: Metro Manila pump prices as open data
+# Metro Manila Pump Prices (2017–now)
+
+_Built with **krudo**, the open-source pipeline in this repository. krudo is the pipeline's name, not the dataset's._
 
 [![CI](https://github.com/OrcaDS/krudo/actions/workflows/ci.yml/badge.svg)](https://github.com/OrcaDS/krudo/actions/workflows/ci.yml)
 [![Weekly pipeline](https://github.com/OrcaDS/krudo/actions/workflows/weekly_pipeline.yml/badge.svg)](https://github.com/OrcaDS/krudo/actions/workflows/weekly_pipeline.yml)
