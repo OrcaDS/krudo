@@ -25,6 +25,21 @@ GOLD_DIR = Path("transform/models/gold")  # one table per model file
 DICTIONARY = Path("docs/data_dictionary.md")
 CSV_ZIP = "krudo_gold_csv.zip"
 NOTES = """\
+## Which file do I need?
+
+**Most people want `fct_pump_prices.parquet`**: weekly lowest and highest price per city × \
+brand × product, January 2017 to now. Names are already in it, so no other file is needed. \
+Prefer CSV? All tables are in `{csv_zip}`.
+
+| If you want… | Download |
+|---|---|
+| Prices per city, brand and product | `fct_pump_prices` |
+| DOE's "common price" (what most stations charged) and overall range | `fct_ncr_summary` |
+| Lists of cities, brands and products | `dim_city`, `dim_brand`, `dim_product` |
+| What every column means | `data_dictionary.md` |
+
+## About
+
 Metro Manila (NCR) weekly retail pump prices, cleaned and standardized. Each gold table comes \
 as Parquet (`<table>.parquet`) and as CSV (all tables in `{csv_zip}`). Columns, units and \
 grain: `data_dictionary.md`.
